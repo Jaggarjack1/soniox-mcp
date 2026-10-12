@@ -1,6 +1,6 @@
 /**
  * MCP server definition: read-only tools over Soniox App meeting transcripts.
- * Transport-agnostic; see stdio.ts, http.ts and api/mcp.ts for entry points.
+ * Transport-agnostic; see stdio.ts, http.ts and api/mcp.ts (file is named mcp-server.ts because Vercel treats src/server.ts as an app entrypoint) for entry points.
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";

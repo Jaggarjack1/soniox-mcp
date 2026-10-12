@@ -5,7 +5,7 @@
  */
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SonioxClient, tokenStoreFromEnv } from "./soniox-client.js";
-import { createSonioxServer } from "./server.js";
+import { createSonioxServer } from "./mcp-server.js";
 
 async function main(): Promise<void> {
   const client = new SonioxClient(await tokenStoreFromEnv());

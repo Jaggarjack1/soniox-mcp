@@ -11,7 +11,9 @@ function textOf(result: Awaited<ReturnType<Client["callTool"]>>): string {
 }
 
 async function main(): Promise<void> {
-  const transport = new StdioClientTransport({ command: "node", args: ["dist/src/stdio.js"], stderr: "pipe", env: { ...process.env } as Record<string, string> });
+  // Set ENV_FILE=.env to exercise the same credentials/token store Claude Desktop uses.
+  const nodeArgs = process.env.ENV_FILE ? [`--env-file=${process.env.ENV_FILE}`, "dist/src/stdio.js"] : ["dist/src/stdio.js"];
+  const transport = new StdioClientTransport({ command: "node", args: nodeArgs, stderr: "pipe", env: { ...process.env } as Record<string, string> });
   const client = new Client({ name: "smoke-test", version: "0.0.0" });
   await client.connect(transport);
 

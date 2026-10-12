@@ -16,7 +16,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { SonioxClient, tokenStoreFromEnv } from "./soniox-client.js";
-import { createSonioxServer } from "./server.js";
+import { createSonioxServer } from "./mcp-server.js";
 import { bearerMatches } from "./auth.js";
 
 const PORT = Number(process.env.PORT ?? 3333);

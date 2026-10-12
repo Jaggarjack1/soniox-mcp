@@ -7,7 +7,7 @@
  */
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { SonioxClient, tokenStoreFromEnv } from "../src/soniox-client.js";
-import { createSonioxServer } from "../src/server.js";
+import { createSonioxServer } from "../src/mcp-server.js";
 import { bearerMatches } from "../src/auth.js";
 
 // Module-level singleton so warm instances reuse refreshed tokens.

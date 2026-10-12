@@ -1,10 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "functions": {
-    "api/mcp.ts": { "maxDuration": 60 }
+    "api/mcp.ts": {
+      "maxDuration": 60
+    }
   },
   "rewrites": [
-    { "source": "/mcp", "destination": "/api/mcp" },
-    { "source": "/soniox", "destination": "/api/mcp" }
+    {
+      "source": "/mcp",
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/soniox",
+      "destination": "/api/mcp"
+    }
   ]
 }
