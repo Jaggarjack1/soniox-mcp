@@ -21,7 +21,29 @@ Claude summarises from the transcript text itself.
 ## Quick start
 
 Prerequisites: Node.js 20+, a Soniox App account (app.soniox.com), and for the remote
-option a Vercel account plus the Vercel CLI (`npm i -g vercel` or use `npx vercel`).
+option a GitHub account, a Vercel account (free Hobby plan is enough) and the Vercel CLI
+(`npm i -g vercel` or use `npx vercel`).
+
+### Shortcut: let Claude Code do it
+
+The only step a human must do is getting the Soniox token (step 1 below) and saving it as
+`soniox-auth.json`, for example on your Desktop. Then paste one of these into Claude Code:
+
+**Local (Claude Desktop):**
+
+> Clone github.com/Jaggarjack1/soniox-mcp into my Documents folder, run npm install and npm run build,
+> move soniox-auth.json from my Desktop into that folder, then add it to my Claude Desktop config as an
+> MCP server called soniox: command node, args the built dist/src/stdio.js, env SONIOX_TOKEN_FILE pointing
+> at the token file. Follow the README if anything is unclear.
+
+**Remote (claude.ai connector), after forking this repo on GitHub:**
+
+> Install the Vercel CLI, log me in, then follow the "Remote" section of the README in
+> github.com/<your-username>/soniox-mcp: link the forked repo as a new Vercel project, create a private
+> Blob store, set the two secrets using the refresh token from soniox-auth.json on my Desktop and a random
+> MCP_AUTH_TOKEN, and deploy. Tell me the final URL and the header value I need.
+
+The manual steps follow.
 
 ### 1. Get your Soniox refresh token (needed by every setup)
 
