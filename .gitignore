@@ -5,3 +5,8 @@ node_modules/
 dist/
 scripts/_sample_*.json
 *.log
+.vercel/
+.env.vercel
+
+.vercel
+.env*
