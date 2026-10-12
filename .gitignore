@@ -10,3 +10,4 @@ scripts/_sample_*.json
 
 .vercel
 .env*
+dm.md
