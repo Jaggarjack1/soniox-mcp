@@ -14,10 +14,11 @@ $auth = Get-Content -Raw -Encoding UTF8 "soniox-auth.json" | ConvertFrom-Json
 $mcpToken = (Get-Content ".env" | Where-Object { $_ -match "^MCP_AUTH_TOKEN=" }) -replace "^MCP_AUTH_TOKEN=", ""
 if (-not $auth.refreshToken -or -not $mcpToken) { throw "Missing refreshToken in soniox-auth.json or MCP_AUTH_TOKEN in .env" }
 
+# Use --value rather than stdin: PowerShell pipes CRLF and the CLI strips only the LF, leaving a stray "\r" in the secret.
 Write-Host "Adding SONIOX_REFRESH_TOKEN (production)..."
-$auth.refreshToken | npx vercel env add SONIOX_REFRESH_TOKEN production --sensitive --force --scope $scope | Select-Object -Last 1
+npx vercel env add SONIOX_REFRESH_TOKEN production --sensitive --force --scope $scope --value $auth.refreshToken.Trim() | Select-Object -Last 1
 Write-Host "Adding MCP_AUTH_TOKEN (production)..."
-$mcpToken | npx vercel env add MCP_AUTH_TOKEN production --sensitive --force --scope $scope | Select-Object -Last 1
+npx vercel env add MCP_AUTH_TOKEN production --sensitive --force --scope $scope --value $mcpToken.Trim() | Select-Object -Last 1
 
 Write-Host "Pulling production env to merge BLOB_READ_WRITE_TOKEN into .env..."
 npx vercel env pull .env.vercel --environment production --yes --scope $scope | Select-Object -Last 1
