@@ -1,0 +1,7 @@
+soniox-auth.json
+.env
+.env.*
+node_modules/
+dist/
+scripts/_sample_*.json
+*.log
