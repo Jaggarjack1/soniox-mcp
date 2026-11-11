@@ -32,9 +32,11 @@ async function main(): Promise<void> {
 
   const get = await client.callTool({ name: "soniox_get_transcript", arguments: { id: first.id, max_chars: 1500 } });
   console.log("\n--- get (first page) ---\n" + textOf(get));
-  console.log("structured:", JSON.stringify(get.structuredContent));
+  const { text: pageText, ...meta } = get.structuredContent as { text?: string; next_offset: number | null };
+  console.log("structured:", JSON.stringify(meta), "| structured text chars:", pageText?.length ?? "MISSING");
+  if (!pageText || !textOf(get).includes(pageText)) throw new Error("structuredContent.text must carry the same page text as content");
 
-  const sc = get.structuredContent as { next_offset: number | null };
+  const sc = meta;
   if (sc.next_offset) {
     const page2 = await client.callTool({ name: "soniox_get_transcript", arguments: { id: first.id, offset: sc.next_offset, max_chars: 1200 } });
     console.log("\n--- get (page 2, first 400 chars) ---\n" + textOf(page2).slice(0, 400));

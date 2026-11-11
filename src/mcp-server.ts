@@ -241,7 +241,7 @@ Args:
     offset (default 0), max_chars (default ${DEFAULT_PAGE_CHARS})
 
 Returns: header (name, id, recorded, duration, speakers, languages) + transcript text + paging footer.
-structuredContent: { id, name, recorded_at, duration_ms, speakers, languages, offset, next_offset, has_more, total_chars }`,
+structuredContent: { id, name, recorded_at, duration_ms, speakers, languages, offset, next_offset, has_more, total_chars, text } where 'text' is this page of the transcript.`,
       inputSchema: GetInput,
       annotations: READ_ONLY,
     },
@@ -277,6 +277,8 @@ structuredContent: { id, name, recorded_at, duration_ms, speakers, languages, of
           next_offset: page.next_offset,
           has_more: page.has_more,
           total_chars: page.total_chars,
+          // Some clients hand the model only structuredContent when it is present, so the page text must be in here too.
+          text: page.text,
         };
         return text(`${header}\n\n${page.text}${footer}`, structured);
       } catch (e) {
