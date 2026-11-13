@@ -17,12 +17,14 @@ Read-only, always available:
 | `soniox_get_transcript` | Full transcript as speaker-labelled paragraphs with `[mm:ss]` timestamps, paged by characters, optional time window |
 | `soniox_search_in_transcript` | Find a phrase inside one transcript; returns timestamped hits with context |
 
-Opt-in, local server only (see [Transcribing files](#transcribing-files-local-server-opt-in)):
+Opt-in with `SONIOX_ENABLE_UPLOAD=1` (see [Transcribing files](#transcribing-files-local-server-opt-in) and
+[Transcribing from a link](#transcribing-from-a-link-local-and-remote-opt-in)):
 
-| Tool | What it does |
-| --- | --- |
-| `soniox_transcribe_file` | Upload an audio or video file from your computer to Soniox and transcribe it into a normal Soniox transcript |
-| `soniox_get_transcription_status` | Progress of a submitted file: extracting audio, uploading, transcribing, completed |
+| Tool | Where | What it does |
+| --- | --- | --- |
+| `soniox_transcribe_file` | local server | Upload an audio or video file from your computer to Soniox and transcribe it into a normal Soniox transcript |
+| `soniox_transcribe_url` | local and remote | Same, for a file behind an https link (direct download, Dropbox or Google Drive share link) |
+| `soniox_get_transcription_status` | local and remote | Progress of a submitted file: extracting audio, uploading, transferring, transcribing, completed |
 
 Smart Scribe summaries are generated inside the Soniox app and are **not** stored server-side, so
 Claude summarises from the transcript text itself.
@@ -198,13 +200,45 @@ Claude Desktop config) and restart Claude Desktop. Then ask, for example,
   open; Claude checks on them with `soniox_get_transcription_status`.
 - A failed upload leaves an empty transcript in Soniox; delete it in the app.
 
-These tools are not available through the remote connector: a claude.ai tool call cannot carry a file,
-and the serverless endpoint cannot read your disk.
+`soniox_transcribe_file` is not available through the remote connector: a claude.ai tool call cannot carry
+a file, and the serverless endpoint cannot read your disk. Use a link there instead (next section).
+
+### From the command line
+
+The same upload is available as a script, for sessions where the local MCP server is not loaded. It uses
+the same credentials as the stdio server and does not need `SONIOX_ENABLE_UPLOAD`:
+
+```bash
+npm run transcribe -- "C:\Users\me\Videos\call.mp4" --name "Client call" --lang sl,en
+```
+
+Outside the repo folder: `node --env-file=/abs/path/.env /abs/path/dist/src/transcribe-cli.js <file> …`.
+Options: `--name`, `--lang`, `--project <id>`, `--extract-audio`, `--no-wait` (exit after the upload),
+`--print` (print the transcript text). It prints the transcript id when the transcription is done.
 
 How it works (reverse-engineered): `POST /api/v1/transcriptions/` creates an empty record whose
 `parameters` carry the language settings, `GET …/presigned-upload?content_type=audio/…` returns an S3
 presigned POST (audio content types only, the format is detected from the bytes), and
 `POST …/async-transcription-bucket {object_key}` starts the job that `GET …/async-status` reports on.
+
+## Transcribing from a link (local and remote, opt-in)
+
+`soniox_transcribe_url` covers the claude.ai connector and the phone: put the recording somewhere that
+gives you a link, paste the link in chat and ask Claude to transcribe it. The server downloads the file and
+streams it straight into Soniox's upload storage; nothing is stored on the server.
+
+Enable it with `SONIOX_ENABLE_UPLOAD=1`: in the Vercel project's environment variables (then redeploy) for
+the connector, or in the `.env` of the local server.
+
+- The link must be `https` and work without signing in. Dropbox share links and Google Drive
+  `…/file/d/<id>/view` links are converted to direct downloads; the file has to be shared with
+  "anyone with the link". Web pages such as YouTube do not work.
+- Formats: mp3, wav, m4a, flac, ogg, opus, webm, mp4, m4v, mov, up to 512 MB. Formats that need
+  conversion (mkv, avi, …) and audio extraction are local-only, because the hosted server has no ffmpeg.
+- On Vercel a transfer gets 270 s (`maxDuration` is 300 s in `vercel.json`). The transfer continues after
+  the tool call returns (`waitUntil`), and its state is kept in the Blob store under `soniox-mcp/jobs/` so a
+  later status call can report it.
+- Links to private or local network addresses are refused, and redirects are checked the same way.
 
 ## Remote use (claude.ai custom connector, Vercel)
 
@@ -212,6 +246,7 @@ presigned POST (audio content types only, the format is detected from the bytes)
 
 - a **private Blob store** connected to the project (provides `BLOB_READ_WRITE_TOKEN`)
 - env `SONIOX_REFRESH_TOKEN` (seed) and `MCP_AUTH_TOKEN` (random shared secret, e.g. `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`)
+- optional env `SONIOX_ENABLE_UPLOAD=1` to add `soniox_transcribe_url`
 
 Then in claude.ai → Settings → Connectors → *Add custom connector*:
 
@@ -228,6 +263,7 @@ npm run dev            # stdio server with tsx
 npm run dev:http       # http://127.0.0.1:3333/mcp (set MCP_AUTH_TOKEN to require a bearer)
 npm run build && npx tsx scripts/test-client.ts   # live smoke test against your account
 npx tsx scripts/test-upload.ts [file ...]         # upload tools: validation only, or really upload the given files
+npx tsx scripts/test-url-upload.ts [link ...]     # link tool: refusals only, or really transcribe the given links
 npx @modelcontextprotocol/inspector node dist/src/stdio.js
 ```
 
@@ -251,3 +287,6 @@ npx @modelcontextprotocol/inspector node dist/src/stdio.js
 - By default the tools are read-only. With `SONIOX_ENABLE_UPLOAD=1` the local server can also create
   transcripts from files you name; it accepts only audio/video file types, so it cannot be used to upload
   other files. The server never deletes, renames or shares transcripts.
+- With the same flag, `soniox_transcribe_url` makes the server fetch a link you give it. It only fetches
+  public `https` addresses and only passes on audio/video types, and the link is not logged or stored
+  (job state keeps the host and file name).

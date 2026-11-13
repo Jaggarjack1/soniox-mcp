@@ -6,19 +6,23 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SonioxClient, tokenStoreFromEnv } from "./soniox-client.js";
 import { createSonioxServer } from "./mcp-server.js";
+import { registerStatusTool, uploadEnabled } from "./transcription-jobs.js";
 
 async function main(): Promise<void> {
   const client = new SonioxClient(await tokenStoreFromEnv());
   const server = createSonioxServer(client);
-  // Write access is opt-in and local-only: the upload tools read files from this computer.
-  const uploadEnabled = /^(1|true|yes)$/i.test(process.env.SONIOX_ENABLE_UPLOAD ?? "");
-  if (uploadEnabled) {
+  // Write access is opt-in. The file tool is local-only: it reads files from this computer.
+  const enabled = uploadEnabled();
+  if (enabled) {
     const { registerUploadTools } = await import("./upload-tools.js");
+    const { registerUrlUploadTools } = await import("./url-upload-tools.js");
     registerUploadTools(server, client);
+    registerUrlUploadTools(server, client);
+    registerStatusTool(server, client);
   }
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`soniox-mcp-server running on stdio (auth: ${client.describeAuth()}, upload tools: ${uploadEnabled ? "on" : "off"})`);
+  console.error(`soniox-mcp-server running on stdio (auth: ${client.describeAuth()}, upload tools: ${enabled ? "on" : "off"})`);
 }
 
 main().catch((err) => {

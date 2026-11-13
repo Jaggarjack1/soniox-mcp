@@ -7,7 +7,8 @@
  *
  * Env: PORT (default 3333), HOST (default 127.0.0.1), MCP_PATH (default /mcp),
  *      MCP_AUTH_TOKEN (required unless HOST is loopback),
- *      BLOB_READ_WRITE_TOKEN | SONIOX_TOKEN_FILE | SONIOX_REFRESH_TOKEN
+ *      BLOB_READ_WRITE_TOKEN | SONIOX_TOKEN_FILE | SONIOX_REFRESH_TOKEN,
+ *      SONIOX_ENABLE_UPLOAD=1 to add soniox_transcribe_url (transcribe a file from a link)
  *
  * Note: some endpoint-security products intercept local HTTP for paths ending in "/mcp"
  * and corrupt the response framing. If clients see "Invalid character in chunk size",
@@ -18,7 +19,10 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { SonioxClient, tokenStoreFromEnv } from "./soniox-client.js";
 import { createSonioxServer } from "./mcp-server.js";
 import { bearerMatches } from "./auth.js";
+import { registerStatusTool, uploadEnabled } from "./transcription-jobs.js";
+import { registerUrlUploadTools } from "./url-upload-tools.js";
 
+const UPLOAD_ENABLED = uploadEnabled();
 const PORT = Number(process.env.PORT ?? 3333);
 const HOST = process.env.HOST ?? "127.0.0.1";
 const MCP_PATH = process.env.MCP_PATH ?? "/mcp";
@@ -82,6 +86,11 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     enableJsonResponse: true,
   });
   const server = createSonioxServer(client);
+  if (UPLOAD_ENABLED) {
+    // Long-running process: transfers finish on their own and job state can stay in memory.
+    registerUrlUploadTools(server, client);
+    registerStatusTool(server, client);
+  }
   await server.connect(transport);
   try {
     const webRes = await transport.handleRequest(toWebRequest(req, body));

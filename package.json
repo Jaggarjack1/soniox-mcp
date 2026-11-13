@@ -13,7 +13,8 @@
     "start:http": "node dist/src/http.js",
     "dev": "tsx src/stdio.ts",
     "dev:http": "tsx src/http.ts",
-    "test:client": "tsx scripts/test-client.ts"
+    "test:client": "tsx scripts/test-client.ts",
+    "transcribe": "node --env-file=.env dist/src/transcribe-cli.js"
   },
   "engines": {
     "node": ">=20"
@@ -21,6 +22,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@vercel/blob": "^2.8.1",
+    "@vercel/functions": "^3.11.2",
     "zod": "^4.6.6"
   },
   "devDependencies": {
