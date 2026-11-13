@@ -6,7 +6,9 @@ Soniox has no public API for the app, so this talks to the same private backend 
 app.soniox.com uses (`mobile-app-backend.soniox.com`). That API is undocumented and can change
 without notice; this project is a personal tool, not something Soniox supports.
 
-## Tools (all read-only)
+## Tools
+
+Read-only, always available:
 
 | Tool | What it does |
 | --- | --- |
@@ -14,6 +16,13 @@ without notice; this project is a personal tool, not something Soniox supports.
 | `soniox_list_transcripts` | List / full-text search transcripts with date, project, tag filters and paging |
 | `soniox_get_transcript` | Full transcript as speaker-labelled paragraphs with `[mm:ss]` timestamps, paged by characters, optional time window |
 | `soniox_search_in_transcript` | Find a phrase inside one transcript; returns timestamped hits with context |
+
+Opt-in, local server only (see [Transcribing files](#transcribing-files-local-server-opt-in)):
+
+| Tool | What it does |
+| --- | --- |
+| `soniox_transcribe_file` | Upload an audio or video file from your computer to Soniox and transcribe it into a normal Soniox transcript |
+| `soniox_get_transcription_status` | Progress of a submitted file: extracting audio, uploading, transcribing, completed |
 
 Smart Scribe summaries are generated inside the Soniox app and are **not** stored server-side, so
 Claude summarises from the transcript text itself.
@@ -173,6 +182,30 @@ or, for a file-only setup, `SONIOX_TOKEN_FILE=C:\path\to\soniox-auth.json`.
 If your machine runs antivirus/proxy TLS inspection, also set `NODE_EXTRA_CA_CERTS` there; the stdio
 child process does not inherit it automatically.
 
+## Transcribing files (local server, opt-in)
+
+Set `SONIOX_ENABLE_UPLOAD=1` in the stdio server's environment (the `.env` file or the `env` block of the
+Claude Desktop config) and restart Claude Desktop. Then ask, for example,
+*"Transcribe C:\Users\me\Videos\call.mp4 with Soniox, it is in Slovene and English, then summarise it."*
+
+- The file is uploaded to Soniox's cloud and transcribed with your account's quota. The result shows up in
+  the Soniox app like any other transcript.
+- Uploaded as they are (max 512 MB, Soniox's limit): mp3, wav, m4a, flac, ogg, opus, webm, mp4, m4v, mov.
+- Larger files and mkv, avi, wmv, mpg, 3gp, aac, wma, aiff, amr need **ffmpeg** (on `PATH`, or set
+  `FFMPEG_PATH`): only the audio track is extracted and uploaded. `extract_audio: true` forces this for any
+  file, which makes big videos upload much faster.
+- Short files finish within the call. Longer ones continue in the background while Claude Desktop stays
+  open; Claude checks on them with `soniox_get_transcription_status`.
+- A failed upload leaves an empty transcript in Soniox; delete it in the app.
+
+These tools are not available through the remote connector: a claude.ai tool call cannot carry a file,
+and the serverless endpoint cannot read your disk.
+
+How it works (reverse-engineered): `POST /api/v1/transcriptions/` creates an empty record whose
+`parameters` carry the language settings, `GET …/presigned-upload?content_type=audio/…` returns an S3
+presigned POST (audio content types only, the format is detected from the bytes), and
+`POST …/async-transcription-bucket {object_key}` starts the job that `GET …/async-status` reports on.
+
 ## Remote use (claude.ai custom connector, Vercel)
 
 `api/mcp.ts` is a stateless Streamable HTTP endpoint. Deploy the repo to Vercel with:
@@ -194,6 +227,7 @@ Connectors added in claude.ai also appear in the Claude desktop and mobile apps.
 npm run dev            # stdio server with tsx
 npm run dev:http       # http://127.0.0.1:3333/mcp (set MCP_AUTH_TOKEN to require a bearer)
 npm run build && npx tsx scripts/test-client.ts   # live smoke test against your account
+npx tsx scripts/test-upload.ts [file ...]         # upload tools: validation only, or really upload the given files
 npx @modelcontextprotocol/inspector node dist/src/stdio.js
 ```
 
@@ -214,4 +248,6 @@ npx @modelcontextprotocol/inspector node dist/src/stdio.js
 
 - Never commit `soniox-auth.json` or `.env` (both gitignored).
 - The remote endpoint is only as secret as `MCP_AUTH_TOKEN`; rotate it by changing the Vercel env var and the connector header.
-- Tools are read-only; the server never deletes, renames or shares transcripts.
+- By default the tools are read-only. With `SONIOX_ENABLE_UPLOAD=1` the local server can also create
+  transcripts from files you name; it accepts only audio/video file types, so it cannot be used to upload
+  other files. The server never deletes, renames or shares transcripts.

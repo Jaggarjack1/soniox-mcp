@@ -30,11 +30,11 @@ const MAX_PAGE_CHARS = 120_000;
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
 
-function text(t: string, structured?: Record<string, unknown>): CallToolResult {
+export function text(t: string, structured?: Record<string, unknown>): CallToolResult {
   return structured ? { content: [{ type: "text", text: t }], structuredContent: structured } : { content: [{ type: "text", text: t }] };
 }
 
-function errorResult(err: unknown): CallToolResult {
+export function errorResult(err: unknown): CallToolResult {
   let msg: string;
   if (err instanceof SonioxApiError) {
     if (err.status === 404) msg = "Error: transcript not found. Check the id with soniox_list_transcripts.";

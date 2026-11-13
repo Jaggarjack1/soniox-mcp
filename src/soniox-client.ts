@@ -171,6 +171,17 @@ export interface SonioxUserInfo {
   memberships: { organization_id: string; organization_name: string; is_personal: boolean }[];
 }
 
+export interface AsyncTranscriptionParameters {
+  language_hints?: string[];
+  enable_language_identification?: boolean;
+}
+
+export interface PresignedUpload {
+  url: string;
+  /** Form fields to send before the file; `key` is the object key to start transcription with. */
+  fields: Record<string, string> & { key: string };
+}
+
 export type OrderBy =
   | "name"
   | "-name"
@@ -379,6 +390,51 @@ export class SonioxClient {
       `/api/v1/transcriptions/${encodeURIComponent(id)}`
     );
     return r.transcription;
+  }
+
+  // ---- file transcription (write endpoints; used only by the local upload tools) ----
+
+  /** Creates an empty transcript record that an uploaded file is then transcribed into. */
+  async createTranscription(input: {
+    name: string;
+    parameters: AsyncTranscriptionParameters;
+    project_id?: string;
+    recorded_at?: string;
+  }): Promise<SonioxTranscription> {
+    const at = input.recorded_at ?? new Date().toISOString();
+    const r = await this.request<{ transcription: SonioxTranscription }>("/api/v1/transcriptions/", {
+      method: "POST",
+      body: {
+        name: input.name,
+        tokens: [],
+        parameters: input.parameters,
+        transcription_started_at: at,
+        transcription_finished_at: at,
+        ...(input.project_id ? { project_id: input.project_id } : {}),
+      },
+    });
+    return r.transcription;
+  }
+
+  /** S3 presigned POST for the record's media file. Soniox accepts only some audio/* content types, max 512 MB. */
+  getPresignedUpload(id: string, contentType: string): Promise<PresignedUpload> {
+    return this.request<PresignedUpload>(`/api/v1/transcriptions/${encodeURIComponent(id)}/presigned-upload`, {
+      query: { content_type: contentType },
+    });
+  }
+
+  /** Starts transcription of an uploaded object, using the parameters stored on the record. */
+  async startAsyncTranscription(id: string, objectKey: string): Promise<void> {
+    await this.request(`/api/v1/transcriptions/${encodeURIComponent(id)}/async-transcription-bucket`, {
+      method: "POST",
+      body: { object_key: objectKey },
+    });
+  }
+
+  /** not_started | pending | completed | error */
+  async getAsyncStatus(id: string): Promise<string> {
+    const r = await this.request<{ status: string }>(`/api/v1/transcriptions/${encodeURIComponent(id)}/async-status`);
+    return r.status;
   }
 
   /** Server-side export in a text format (the API also offers pdf/docx, which are binary). */
